@@ -92,7 +92,7 @@ with st.sidebar:
 
     page = st.radio(
         "Navigation",
-        ["🏠 Home & Predict", "📊 EDA Dashboard", "📈 Model Performance", "🗂️ Batch Predict"],
+        ["🏠 Home & Predict", "📊 EDA Dashboard", "📈 Model Performance"],
         label_visibility="collapsed",
     )
 
@@ -335,56 +335,3 @@ elif page == "📈 Model Performance":
             }).sort_values("Importance", ascending=False)
             fi["Importance %"] = (fi["Importance"] * 100).round(2).astype(str) + "%"
             st.dataframe(fi[["Feature", "Importance %"]], use_container_width=True, hide_index=True)
-
-
-# ─── PAGE: Batch Predict ──────────────────────────────────────────────────────
-elif page == "🗂️ Batch Predict":
-    st.markdown("# 🗂️ Batch Prediction")
-    st.markdown("Upload a CSV with columns: `Gender, Age, Height, Weight, Duration, Heart_Rate, Body_Temp`")
-    st.divider()
-
-    uploaded = st.file_uploader("Upload CSV", type=["csv"])
-
-    if uploaded:
-        if not artifacts:
-            st.error("Model not loaded. Run `python train.py` first.")
-        else:
-            df_input = pd.read_csv(uploaded)
-            st.markdown(f"**Loaded {len(df_input)} records**")
-            st.dataframe(df_input.head(5), use_container_width=True, hide_index=True)
-
-            if st.button("⚡ Run Batch Prediction", type="primary"):
-                with st.spinner("Running predictions..."):
-                    le    = artifacts["label_encoder"]
-                    model = artifacts["best_model"]
-                    results_list = []
-                    for _, row in df_input.iterrows():
-                        try:
-                            X_inp = preprocess_single(row.to_dict(), le)
-                            pred  = model.predict(X_inp)[0]
-                            pred  = max(1.0, min(314.0, pred))
-                            results_list.append(round(pred, 1))
-                        except Exception as e:
-                            results_list.append(None)
-
-                df_out = df_input.copy()
-                df_out["Predicted_Calories"] = results_list
-
-                st.success("✅ Batch prediction complete!")
-                st.dataframe(df_out, use_container_width=True, hide_index=True)
-
-                csv = df_out.to_csv(index=False)
-                st.download_button(
-                    "⬇️ Download Results CSV",
-                    data=csv,
-                    file_name="calorie_predictions.csv",
-                    mime="text/csv",
-                )
-    else:
-        # Show sample format
-        sample = pd.DataFrame([
-            {"Gender": "male",   "Age": 28, "Height": 175, "Weight": 75, "Duration": 30, "Heart_Rate": 110, "Body_Temp": 40.2},
-            {"Gender": "female", "Age": 23, "Height": 162, "Weight": 58, "Duration": 20, "Heart_Rate": 95,  "Body_Temp": 39.8},
-        ])
-        st.markdown("**Expected CSV format:**")
-        st.dataframe(sample, use_container_width=True, hide_index=True)
